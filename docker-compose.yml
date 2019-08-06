@@ -88,5 +88,7 @@ services:
     expose:
       - ${PORT_REDIS}
 
- 
-
+networks:
+  default:
+    external:
+      name: nginx-proxy
