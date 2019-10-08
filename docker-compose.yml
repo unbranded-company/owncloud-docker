@@ -1,20 +1,13 @@
 version: '2.1'
 
-volumes:
-  files:
-    driver: local
-  mysql:
-    driver: local
-  backup:
-    driver: local
-  redis:
-    driver: local
-
 services:
   owncloud:
     container_name: ${PROJECT_NAME}_owc
     image: owncloud/server:${OWNCLOUD_VERSION}
     restart: always
+    networks:
+      - internal
+      - web
     ports:
       - ${PORT_HTTP}:8080
     depends_on:
@@ -43,6 +36,12 @@ services:
       retries: 5
     volumes:
       - files:/mnt/data
+    labels:
+      - "traefik.docker.network=web"
+      - "traefik.enable=true"
+      - "traefik.frontend.rule=Host:${DOMAIN_NAME}"
+      - "traefik.port=8080"
+      - "traefik.protocol=http"
     expose:
       - ${PORT_HTTP}
 
@@ -50,6 +49,9 @@ services:
     container_name: ${PROJECT_NAME}_db
     image: webhippie/mariadb:latest
     restart: always
+    networks:
+      - internal
+      - web
     ports: 
       - "${PORT_DB}:3306"
     environment:
@@ -67,6 +69,12 @@ services:
     volumes:
       - mysql:/var/lib/mysql
       - backup:/var/lib/backup
+    labels:
+      - "traefik.docker.network=web"
+      - "traefik.enable=true"
+      - "traefik.frontend.rule=Host:${URL_DB}"
+      - "traefik.port=80"
+      - "traefik.protocol=http"
     expose:
       - ${PORT_DB}
 
@@ -74,7 +82,9 @@ services:
     container_name: ${PROJECT_NAME}_redis
     image: webhippie/redis:latest
     restart: always
-    ports: 
+    networks:
+      - internal
+    ports:
       - "${PORT_REDIS}:6379"
     environment:
       - REDIS_DATABASES=1
@@ -88,7 +98,18 @@ services:
     expose:
       - ${PORT_REDIS}
 
+volumes:
+  files:
+    driver: local
+  mysql:
+    driver: local
+  backup:
+    driver: local
+  redis:
+    driver: local
+
 networks:
-  default:
-    external:
-      name: nginx-proxy
+  web:
+    external: true
+  internal:
+    external: false
